@@ -1,6 +1,6 @@
 # DLsite 录屏马赛克
 
-直接安装 [`dlsite-recording-mosaic.user.js`](./dlsite-recording-mosaic.user.js) 即可。脚本适用于 Tampermonkey 和 Violentmonkey，默认以最高强度遮挡 DLsite 的作品封面、详情页轮播图、作品名与标签。
+[点击这里直接安装脚本](https://raw.githubusercontent.com/jiangdaolia/dlsite-recording-mosaic/main/dlsite-recording-mosaic.user.js)。该地址直接返回 `.user.js` 文件，不会跳转到 GitHub 文件预览页。脚本适用于 Tampermonkey 和 Violentmonkey，默认以最高强度遮挡 DLsite 的作品封面、详情页轮播图、作品名与标签。
 
 ## 安装
 

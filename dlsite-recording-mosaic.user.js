@@ -4,6 +4,8 @@
 // @version      1.0.0
 // @description  自动遮挡 DLsite 的作品图片、详情轮播图、作品名与标签，方便安全录屏。
 // @author       Local
+// @downloadURL  https://raw.githubusercontent.com/jiangdaolia/dlsite-recording-mosaic/main/dlsite-recording-mosaic.user.js
+// @updateURL    https://raw.githubusercontent.com/jiangdaolia/dlsite-recording-mosaic/main/dlsite-recording-mosaic.user.js
 // @match        https://dlsite.com/*
 // @match        https://*.dlsite.com/*
 // @run-at       document-start
