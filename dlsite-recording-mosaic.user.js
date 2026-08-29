@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DLsite 录屏马赛克
 // @namespace    https://github.com/local/dlsite-recording-mosaic
-// @version      1.0.1
+// @version      1.0.2
 // @description  自动遮挡 DLsite 的作品图片、详情轮播图、作品名与标签，方便安全录屏。
 // @author       Local
 // @downloadURL  https://raw.githubusercontent.com/jiangdaolia/dlsite-recording-mosaic/main/dlsite-recording-mosaic.user.js
@@ -177,12 +177,13 @@
   }
 
   function addClass(element, className) {
+    if (!(element instanceof Element)) return;
+
     const isTextMask = className === 'dlm-title' || className === 'dlm-tag';
-    if (
-      element instanceof Element &&
-      !(isTextMask && element.closest('.dlm-voice-actor')) &&
-      !element.classList.contains(className)
-    ) {
+    const overlapsVoiceActor =
+      isTextMask &&
+      (element.closest('.dlm-voice-actor') || element.querySelector('.dlm-voice-actor'));
+    if (!overlapsVoiceActor && !element.classList.contains(className)) {
       element.classList.add(className);
     }
   }
@@ -267,6 +268,14 @@
       container.classList.remove('dlm-title', 'dlm-tag');
       for (const element of container.querySelectorAll('.dlm-title, .dlm-tag')) {
         element.classList.remove('dlm-title', 'dlm-tag');
+      }
+
+      for (
+        let ancestor = container.parentElement;
+        ancestor && ancestor !== document.documentElement;
+        ancestor = ancestor.parentElement
+      ) {
+        ancestor.classList.remove('dlm-title', 'dlm-tag');
       }
     }
   }
