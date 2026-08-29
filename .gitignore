@@ -1,0 +1,14 @@
+# Local/private notes and tool state must never be committed.
+.DS_Store
+.agents/
+.codex/
+.idea/
+.vscode/
+notes/
+thoughts/
+*.local.md
+*.log
+
+# Temporary downloads and packages.
+*.tmp
+*.zip
