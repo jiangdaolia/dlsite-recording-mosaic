@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DLsite 录屏马赛克
 // @namespace    https://github.com/local/dlsite-recording-mosaic
-// @version      1.0.5
+// @version      1.0.6
 // @description  自动遮挡 DLsite 的作品图片、详情轮播图、作品名与标签，方便安全录屏。
 // @author       Local
 // @downloadURL  https://raw.githubusercontent.com/jiangdaolia/dlsite-recording-mosaic/main/dlsite-recording-mosaic.user.js
@@ -26,7 +26,7 @@
     strength: 5
   });
   const STORAGE_PREFIX = 'dlsite-recording-mosaic.';
-  const SCRIPT_VERSION = '1.0.5';
+  const SCRIPT_VERSION = '1.0.6';
 
   const ROOT_CLASSES = Object.freeze({
     enabled: 'dlm-enabled',
@@ -78,30 +78,6 @@
     html.dlm-enabled.dlm-titles input.dlm-title,
     html.dlm-enabled.dlm-titles textarea.dlm-title {
       -webkit-text-security: square !important;
-    }
-
-    #dlm-voice-debug-tools {
-      position: fixed !important;
-      right: 16px !important;
-      bottom: 16px !important;
-      z-index: 2147483647 !important;
-      display: flex !important;
-      gap: 8px !important;
-      filter: none !important;
-      opacity: 1 !important;
-    }
-
-    #dlm-voice-debug-tools button {
-      padding: 9px 13px !important;
-      border: 1px solid #fff !important;
-      border-radius: 6px !important;
-      background: #255f9e !important;
-      color: #fff !important;
-      font: 13px/1.2 sans-serif !important;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
-      cursor: pointer !important;
-      filter: none !important;
-      opacity: 1 !important;
     }
 
     @media print {
@@ -417,36 +393,6 @@
     }
   }
 
-  function installVoiceActorDiagnosticButton() {
-    if (!isProductDetailPage() || document.getElementById('dlm-voice-debug-tools')) return;
-    if (!document.body) {
-      document.addEventListener('DOMContentLoaded', installVoiceActorDiagnosticButton, { once: true });
-      return;
-    }
-
-    const tools = document.createElement('div');
-    tools.id = 'dlm-voice-debug-tools';
-
-    const saveButton = document.createElement('button');
-    saveButton.type = 'button';
-    saveButton.textContent = '保存诊断 JSON';
-    saveButton.addEventListener('click', () => {
-      saveVoiceActorDiagnostic();
-      saveButton.textContent = '已保存';
-      window.setTimeout(() => {
-        saveButton.textContent = '保存诊断 JSON';
-      }, 3000);
-    });
-
-    const shareButton = document.createElement('button');
-    shareButton.type = 'button';
-    shareButton.textContent = '分享到微信';
-    shareButton.addEventListener('click', shareVoiceActorDiagnostic);
-
-    tools.append(saveButton, shareButton);
-    document.body.appendChild(tools);
-  }
-
   function markTitles(root) {
     for (const selector of TITLE_SELECTORS) {
       for (const element of queryWithin(root, selector)) addClass(element, 'dlm-title');
@@ -543,7 +489,6 @@
   function start() {
     applySettings();
     scan(document);
-    installVoiceActorDiagnosticButton();
 
     const observer = new MutationObserver((mutations) => {
       if (mutations.length) queueScan();
