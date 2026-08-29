@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DLsite 录屏马赛克
 // @namespace    https://github.com/local/dlsite-recording-mosaic
-// @version      1.0.4
+// @version      1.0.5
 // @description  自动遮挡 DLsite 的作品图片、详情轮播图、作品名与标签，方便安全录屏。
 // @author       Local
 // @downloadURL  https://raw.githubusercontent.com/jiangdaolia/dlsite-recording-mosaic/main/dlsite-recording-mosaic.user.js
@@ -26,7 +26,7 @@
     strength: 5
   });
   const STORAGE_PREFIX = 'dlsite-recording-mosaic.';
-  const SCRIPT_VERSION = '1.0.4';
+  const SCRIPT_VERSION = '1.0.5';
 
   const ROOT_CLASSES = Object.freeze({
     enabled: 'dlm-enabled',
@@ -269,17 +269,11 @@
   function protectVoiceActorRows(root) {
     if (!isProductDetailPage()) return;
 
-    for (const label of queryWithin(root, 'dt, th')) {
-      const normalized = (label.textContent || '').replace(/[：:\s]/g, '');
-      if (!VOICE_ACTOR_LABEL.test(normalized)) continue;
-
+    for (const label of findVoiceActorLabels(root)) {
       const value = label.nextElementSibling;
-      const hasExpectedValue =
-        (label.tagName === 'DT' && value?.tagName === 'DD') ||
-        (label.tagName === 'TH' && value?.tagName === 'TD');
-      if (!hasExpectedValue) continue;
-
-      const container = label.tagName === 'TH' ? label.parentElement : value;
+      const container = label.closest(
+        'tr, .c-productTitleBox__creators, .c-productInfo__item'
+      ) || label.parentElement;
       for (const element of [container, value]) {
         if (element instanceof Element) element.classList.add('dlm-voice-actor');
       }
@@ -322,14 +316,14 @@
     };
   }
 
-  function findVoiceActorLabels() {
+  function findVoiceActorLabels(root = document) {
     const selectors = [
       'th', 'dt', 'strong', 'label', 'span',
       '[class*="label"]', '[class*="Label"]',
       '[class*="heading"]', '[class*="Heading"]'
     ].join(',');
 
-    return [...new Set(queryWithin(document, selectors))].filter((element) => {
+    return [...new Set(queryWithin(root, selectors))].filter((element) => {
       const normalized = (element.textContent || '').replace(/[：:\s]/g, '');
       return VOICE_ACTOR_LABEL.test(normalized);
     });
@@ -337,12 +331,12 @@
 
   function diagnosticEntry(label) {
     const nearby =
-      label.closest('tr, dd, li, [class*="voice"], [class*="Voice"], [class*="creator"]') ||
+      label.closest('tr, .c-productTitleBox__creators, .c-productInfo__item, dd, li') ||
       label.parentElement;
     const ancestors = [];
     for (
       let element = label;
-      element && ancestors.length < 10;
+      element && ancestors.length < 5;
       element = element.parentElement
     ) {
       ancestors.push(describeElement(element));
