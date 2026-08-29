@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DLsite 录屏马赛克
 // @namespace    https://github.com/local/dlsite-recording-mosaic
-// @version      1.0.3
+// @version      1.0.4
 // @description  自动遮挡 DLsite 的作品图片、详情轮播图、作品名与标签，方便安全录屏。
 // @author       Local
 // @downloadURL  https://raw.githubusercontent.com/jiangdaolia/dlsite-recording-mosaic/main/dlsite-recording-mosaic.user.js
@@ -12,7 +12,6 @@
 // @grant        GM_addStyle
 // @grant        GM_getValue
 // @grant        GM_setValue
-// @grant        GM_setClipboard
 // @grant        GM_registerMenuCommand
 // ==/UserScript==
 
@@ -27,7 +26,7 @@
     strength: 5
   });
   const STORAGE_PREFIX = 'dlsite-recording-mosaic.';
-  const SCRIPT_VERSION = '1.0.3';
+  const SCRIPT_VERSION = '1.0.4';
 
   const ROOT_CLASSES = Object.freeze({
     enabled: 'dlm-enabled',
@@ -81,11 +80,18 @@
       -webkit-text-security: square !important;
     }
 
-    #dlm-voice-debug-button {
+    #dlm-voice-debug-tools {
       position: fixed !important;
       right: 16px !important;
       bottom: 16px !important;
       z-index: 2147483647 !important;
+      display: flex !important;
+      gap: 8px !important;
+      filter: none !important;
+      opacity: 1 !important;
+    }
+
+    #dlm-voice-debug-tools button {
       padding: 9px 13px !important;
       border: 1px solid #fff !important;
       border-radius: 6px !important;
@@ -359,48 +365,92 @@
     };
   }
 
-  async function copyVoiceActorDiagnostic() {
+  function buildVoiceActorDiagnostic() {
     const labels = findVoiceActorLabels();
-    const report = JSON.stringify({
+    return {
       scriptVersion: SCRIPT_VERSION,
       url: location.href,
       rootClass: document.documentElement?.className || '',
       voiceActorLabelsFound: labels.length,
       entries: labels.slice(0, 20).map(diagnosticEntry)
-    }, null, 2);
+    };
+  }
+
+  function createVoiceActorDiagnosticFile() {
+    const productId = location.pathname.match(/(?:RJ|BJ|VJ)\d+/i)?.[0] || 'product';
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `dlsite-voice-diagnostic-${productId}-${timestamp}.json`;
+    const contents = JSON.stringify(buildVoiceActorDiagnostic(), null, 2);
+    return new File([contents], filename, { type: 'application/json' });
+  }
+
+  function saveVoiceActorDiagnostic() {
+    const file = createVoiceActorDiagnosticFile();
+    const url = URL.createObjectURL(file);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = file.name;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    return file.name;
+  }
+
+  async function shareVoiceActorDiagnostic() {
+    const file = createVoiceActorDiagnosticFile();
 
     try {
-      if (typeof GM_setClipboard === 'function') {
-        GM_setClipboard(report, 'text/plain');
-      } else {
-        await navigator.clipboard.writeText(report);
+      const shareData = {
+        title: 'DLsite 声优遮罩诊断',
+        text: '请查看附件中的声优遮罩诊断信息。',
+        files: [file]
+      };
+      if (typeof navigator.share === 'function' && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+        return true;
       }
-      return true;
+
+      saveVoiceActorDiagnostic();
+      window.alert('当前浏览器不支持直接分享 JSON，文件已保存。请在微信中发送该文件。');
+      return false;
     } catch (error) {
-      window.prompt('请复制以下诊断信息并发给我：', report);
+      if (error?.name === 'AbortError') return false;
+      saveVoiceActorDiagnostic();
+      window.alert('分享失败，诊断 JSON 已改为保存到本地。');
       return false;
     }
   }
 
   function installVoiceActorDiagnosticButton() {
-    if (!isProductDetailPage() || document.getElementById('dlm-voice-debug-button')) return;
+    if (!isProductDetailPage() || document.getElementById('dlm-voice-debug-tools')) return;
     if (!document.body) {
       document.addEventListener('DOMContentLoaded', installVoiceActorDiagnosticButton, { once: true });
       return;
     }
 
-    const button = document.createElement('button');
-    button.id = 'dlm-voice-debug-button';
-    button.type = 'button';
-    button.textContent = '复制声优诊断';
-    button.addEventListener('click', async () => {
-      const copied = await copyVoiceActorDiagnostic();
-      button.textContent = copied ? '已复制，发给我' : '请手动复制';
+    const tools = document.createElement('div');
+    tools.id = 'dlm-voice-debug-tools';
+
+    const saveButton = document.createElement('button');
+    saveButton.type = 'button';
+    saveButton.textContent = '保存诊断 JSON';
+    saveButton.addEventListener('click', () => {
+      saveVoiceActorDiagnostic();
+      saveButton.textContent = '已保存';
       window.setTimeout(() => {
-        button.textContent = '复制声优诊断';
+        saveButton.textContent = '保存诊断 JSON';
       }, 3000);
     });
-    document.body.appendChild(button);
+
+    const shareButton = document.createElement('button');
+    shareButton.type = 'button';
+    shareButton.textContent = '分享到微信';
+    shareButton.addEventListener('click', shareVoiceActorDiagnostic);
+
+    tools.append(saveButton, shareButton);
+    document.body.appendChild(tools);
   }
 
   function markTitles(root) {
@@ -488,7 +538,8 @@
     GM_registerMenuCommand('切换作品图片/轮播', () => toggleSetting('images'));
     GM_registerMenuCommand('切换作品名', () => toggleSetting('titles'));
     GM_registerMenuCommand('切换标签/类型', () => toggleSetting('tags'));
-    GM_registerMenuCommand('复制声优诊断信息', copyVoiceActorDiagnostic);
+    GM_registerMenuCommand('保存声优诊断 JSON', saveVoiceActorDiagnostic);
+    GM_registerMenuCommand('分享声优诊断', shareVoiceActorDiagnostic);
     GM_registerMenuCommand('切换遮挡强度（1 → 5）', () => {
       saveSetting('strength', settings.strength >= 5 ? 1 : settings.strength + 1);
       console.info(`[DLsite 录屏马赛克] 遮挡强度: ${settings.strength}/5`);
