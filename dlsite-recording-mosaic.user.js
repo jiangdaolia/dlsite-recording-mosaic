@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         DLsite 录屏马赛克
 // @namespace    https://github.com/local/dlsite-recording-mosaic
-// @version      1.0.0
+// @version      1.0.1
 // @description  自动遮挡 DLsite 的作品图片、详情轮播图、作品名与标签，方便安全录屏。
 // @author       Local
 // @downloadURL  https://raw.githubusercontent.com/jiangdaolia/dlsite-recording-mosaic/main/dlsite-recording-mosaic.user.js
@@ -155,6 +155,7 @@
 
   const TAG_LINK_HINT = /(?:genre|tag|work_category)(?:\[|%5B|=|\/)/i;
   const TAG_LABEL = /^(?:ジャンル(?:・属性)?|作品ジャンル|genre(?:s)?|类型|類型|分类|分類|标签|標籤)$/i;
+  const VOICE_ACTOR_LABEL = /^(?:声優|声优|聲優|配音|voiceactors?|cv)$/i;
   const NON_TITLE_TEXT = /^(?:詳細|详情|詳情|more|view|作品詳細|作品详情|查看作品)$/i;
 
   let settings = loadSettings();
@@ -176,7 +177,12 @@
   }
 
   function addClass(element, className) {
-    if (element instanceof Element && !element.classList.contains(className)) {
+    const isTextMask = className === 'dlm-title' || className === 'dlm-tag';
+    if (
+      element instanceof Element &&
+      !(isTextMask && element.closest('.dlm-voice-actor')) &&
+      !element.classList.contains(className)
+    ) {
       element.classList.add(className);
     }
   }
@@ -234,6 +240,37 @@
     return /\/(?:work|announce)\/=\/product_id\//.test(location.pathname);
   }
 
+  function protectVoiceActorRows(root) {
+    if (!isProductDetailPage()) return;
+
+    for (const label of queryWithin(root, 'dt, th')) {
+      const normalized = (label.textContent || '').replace(/[：:\s]/g, '');
+      if (!VOICE_ACTOR_LABEL.test(normalized)) continue;
+
+      const value = label.nextElementSibling;
+      const hasExpectedValue =
+        (label.tagName === 'DT' && value?.tagName === 'DD') ||
+        (label.tagName === 'TH' && value?.tagName === 'TD');
+      if (!hasExpectedValue) continue;
+
+      const container = label.tagName === 'TH' ? label.parentElement : value;
+      for (const element of [container, value]) {
+        if (element instanceof Element) element.classList.add('dlm-voice-actor');
+      }
+    }
+  }
+
+  function clearVoiceActorMasks(root) {
+    if (!isProductDetailPage()) return;
+
+    for (const container of queryWithin(root, '.dlm-voice-actor')) {
+      container.classList.remove('dlm-title', 'dlm-tag');
+      for (const element of container.querySelectorAll('.dlm-title, .dlm-tag')) {
+        element.classList.remove('dlm-title', 'dlm-tag');
+      }
+    }
+  }
+
   function markTitles(root) {
     for (const selector of TITLE_SELECTORS) {
       for (const element of queryWithin(root, selector)) addClass(element, 'dlm-title');
@@ -277,9 +314,11 @@
   }
 
   function scan(root = document) {
+    protectVoiceActorRows(root);
     markImages(root);
     markTitles(root);
     markTags(root);
+    clearVoiceActorMasks(root);
   }
 
   function queueScan() {
